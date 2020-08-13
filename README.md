@@ -16,16 +16,21 @@ Networks should be built and controlled by the people who use them, with tools t
 
 ```javascript
     addGeoJSONToMap('map_example.geojson', map);
+```
+Parses the .geojson file and draws markers and geometries from feature collection on the map 
+
+```javascript
     parseNetworkJSONFile('network_example_simple.json', map);
 ```
+Parses the .json network file and draws antenna links and coverage for each antenna on the map
 
 Example network configuration file: (without comments when used)
 ```json5
 {
   "antenna_sites": [
     {
-      "site_name": "site1",                   //same as the name property of a map marker (see map_example.geojson)
-      "installed_antennas": [                 //sites can have multiple antennas
+      "site_name": "site1",                   //must be the same value as the name property of a map marker where the antenna pattern is later drawn 
+      "installed_antennas": [                 //see name property in map_example.geojson
         {
           "antenna_name": "site1_antenna1",   //name which is later used for links
           "point_dir": 225,                   //in degrees (facing north equals 0°,increasing clock-wise)
@@ -35,18 +40,18 @@ Example network configuration file: (without comments when used)
       ]
     },
     {
-      "site_name": "site2",
-      "installed_antennas": [
+      "site_name": "site2",                   //configuration can have multiple sites
+      "installed_antennas": [                 //sites can have multiple antennas
         {
           "antenna_name": "site2_antenna1",
           "point_dir": 45,
           "install_height": 15,
-          "antenna_profile": "Brand-AP-Gen2" 
+          "antenna_profile": "Brand-AP-Gen2"
         }
       ]
     }
   ],
-  "antenna_profiles": [
+  "antenna_profiles": [                 
     {
       "profile_name": "Brand-AP-Gen2",  
       "output_power": 27,               //in dBw
@@ -64,6 +69,12 @@ Example network configuration file: (without comments when used)
   ]
 }
 ```
+## Dependencies / Used Leaflet Plugins
+
+ The function `getElevation` requires a tileLayer `L.tileLayer.colorPicker` from the leaflet plugin [leaflet-tilelayer-colorpicker](https://github.com/frogcat/leaflet-tilelayer-colorpicker) to get the elevation at any point by using the function `getColor` of that tile layer. 
+ 
+The function `drawRadiationPattern` requires a tileLayer `L.TileLayer.maskCanvas` from the leaflet plugin [leaflet-maskcanvas](https://github.com/domoritz/leaflet-maskcanvas) to draw the coverage on the tile layers, which are created in the function.
+
 
 ## TODO
 -  increase calculation speed of the radiation patterns
