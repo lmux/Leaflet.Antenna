@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>AntennaMap</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0
+        }
+
+        #mapid {
+            position: absolute;
+            width: 100%;
+            top: 0;
+            bottom: 0;
+            z-index: 2
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+          integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+            integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+            crossorigin=""></script>
+</head>
+<body>
+<div id="mapid"></div>
+
+<script src="../src/Leaflet.Antenna.js"></script>
+<script src="../src/Leaflet.Antenna.Files.js"></script>
+<script src="../lib/leaflet-tilelayer-colorpicker.js"></script>
+<script src="../lib/QuadTree.js"></script>
+<script src="../lib/L.GridLayer.MaskCanvas.js"></script>
+<script>
+    //let baseLayers = createBaseLayers();
+    //let map = L.map('mapid', {layers: baseLayers[0]}).setView([52.4721, 13.2155], 11);
+    let map = L.map('mapid').setView([52.4721, 13.2155], 11);
+    //createLayerControl(map, baseLayers);
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+        minZoom: 0,
+        maxZoom: 20,
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+            '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+            'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        id: 'mapbox/streets-v11',
+        tileSize: 512,
+        zoomOffset: -1
+    }).addTo(map);
+
+    let colorPicker = L.tileLayer.colorPicker('https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token={access_token}', {
+        access_token: 'pk.eyJ1IjoiZ2VicmF1Y2h0YnJvdCIsImEiOiJja2N6dDRnejEwYTVrMzZxbWhzZTRwZXQ3In0.Uz4EUtUrRtEJVJXmGrKVwg'
+    }).setOpacity(0).addTo(map);
+
+    addGeoJSONToMap('map_example.geojson', map);
+    parseNetworkJSONFile('network_example_simple.json', map);
+</script>
+</body>
+</html>

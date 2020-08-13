@@ -1,0 +1,42 @@
+{
+  "antenna_sites": [
+    {
+      "site_name": "site1",
+      "installed_antennas": [
+        {
+          "antenna_name": "site1_antenna1",
+          "point_dir": 225,
+          "install_height": 15,
+          "antenna_profile": "Brand-AP-Gen2"
+        }
+      ]
+    },
+    {
+      "site_name": "site2",
+      "installed_antennas": [
+        {
+          "antenna_name": "site2_antenna1",
+          "point_dir": 45,
+          "install_height": 15,
+          "antenna_profile": "Brand-AP-Gen2"
+        }
+      ]
+    }
+  ],
+  "antenna_profiles": [
+    {
+      "profile_name": "Brand-AP-Gen2",
+      "output_power": 27,
+      "gain": 19,
+      "sensitivity": 85,
+      "ant_file": "Brand-AP-Gen2.ant",
+      "frequency": 2.4
+    }
+  ],
+  "antenna_links": [
+    {
+      "antenna_from": "site1_antenna1",
+      "antenna_to": "site2_antenna1"
+    }
+  ]
+}
