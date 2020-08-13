@@ -51,16 +51,16 @@ async function parseNetworkJSONFile(file, map) {
     let networkData = await fetch(file).then(res => res.json());
     let markerNameAndPos = getMapMarkerNameAndPos(map);
     if (networkData.antenna_links) {
-        networkData.antenna_links.forEach(antenna_link => {
+        for (const antenna_link of networkData.antenna_links) {
             let site_from = findSiteOfAntenna(antenna_link.antenna_from, networkData.antenna_sites);
             let site_to = findSiteOfAntenna(antenna_link.antenna_to, networkData.antenna_sites);
 
-            let antenna_from = getPositionOfMarker(site_from, markerNameAndPos);
-            let antenna_to = getPositionOfMarker(site_to, markerNameAndPos);
+            let antenna_from = await getPositionOfMarker(site_from, markerNameAndPos);
+            let antenna_to = await getPositionOfMarker(site_to, markerNameAndPos);
 
             if (antenna_from && antenna_to)
                 L.polyline([antenna_from, antenna_to], {radius: 5}).addTo(map);
-        });
+        }
     }
     if (networkData.antenna_sites) {
         for (const site of networkData.antenna_sites) {
@@ -106,7 +106,7 @@ async function drawRadiationPattern(position, antennaProfile, pointDir, installH
         map.createPane('radiationPatternPane').style.zIndex = '300';
     }
 
-    L.TileLayer.maskCanvas()
+    L.TileLayer.maskCanvas();
 
     let layerReachablePoints = L.TileLayer.maskCanvas({
         radius: 25,  // radius in pixels or in meters (see useAbsoluteRadius)
