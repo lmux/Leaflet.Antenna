@@ -4,13 +4,10 @@
  @returns {number[]} gain value at each angle, starting at 0 and increasing by 1.
  */
 async function parseAntFile(antFile) {
-    let radDiff;
-    await fetch(antFile)
+    return await fetch(antFile)
         .then(response => response.text())
         .then(data => data.split("\n"))
-        .then(data => JSON.parse("[" + data + "]"))
-        .then(data => radDiff = data);
-    return radDiff;
+        .then(data => JSON.parse("[" + data + "]"));
 }
 
 /**
@@ -55,8 +52,8 @@ async function parseNetworkJSONFile(file, map) {
             let site_from = findSiteOfAntenna(antenna_link.antenna_from, networkData.antenna_sites);
             let site_to = findSiteOfAntenna(antenna_link.antenna_to, networkData.antenna_sites);
 
-            let antenna_from = await getPositionOfMarker(site_from, markerNameAndPos);
-            let antenna_to = await getPositionOfMarker(site_to, markerNameAndPos);
+            let antenna_from = getPositionOfMarker(site_from, markerNameAndPos);
+            let antenna_to = getPositionOfMarker(site_to, markerNameAndPos);
 
             if (antenna_from && antenna_to)
                 L.polyline([antenna_from, antenna_to], {radius: 5}).addTo(map);
@@ -66,7 +63,7 @@ async function parseNetworkJSONFile(file, map) {
         for (const site of networkData.antenna_sites) {
             for (const antenna of site.installed_antennas) {
                 let antennaProfile = getAntennaProfile(antenna.antenna_profile, networkData.antenna_profiles);
-                let antennaPosition = await getPositionOfMarker(site.site_name, markerNameAndPos);
+                let antennaPosition = getPositionOfMarker(site.site_name, markerNameAndPos);
                 drawRadiationPattern(antennaPosition, antennaProfile, antenna.point_dir, antenna.install_height, map);
             }
         }
@@ -81,7 +78,7 @@ async function parseNetworkJSONFile(file, map) {
  @param {{name: String,pos:number[]}[]} markerNameAndPosList: array containing marker names with their position
  @returns {number} position of the given marker if in array, else undefined
  */
-async function getPositionOfMarker(markerName, markerNameAndPosList) {
+function getPositionOfMarker(markerName, markerNameAndPosList) {
     let position;
     for (const marker of markerNameAndPosList) {
         if (marker.name === markerName) {

@@ -88,7 +88,7 @@ function calcRadPatternBorder(center, pointDir, radiationIDif, outputPowerTXAnte
  @param {number[]} location: point of interest, e.g. [51.33849, 12.40729]
  @returns {number} elevation at the given location
  */
-async function getElevation(location) {
+function getElevation(location) {
     //TODO: fully initialize requested tiles before using getColor (currently tiles have to be loaded beforehand by looking at the map region)
     //modify leaflet-tilelayer-colorpicker to execute this._update function when tile is not loaded with setTimeout until loaded
     //TODO: use try/catch for NaN exceptions
@@ -116,7 +116,7 @@ async function calcRadPatternWithObstacles(center, pointDir, installHeight, antF
 
     const radiationIDif = await parseAntFile(antFile);
     const outerBorder = calcRadPatternBorder(center, pointDir, radiationIDif, outputPowerTXAntenna, sensitivityRXAntenna, gainRXAntenna, frequency);
-    const elevationTXAntenna = await getElevation(center) + installHeight;
+    const elevationTXAntenna = getElevation(center) + installHeight;
 
     let heatMapReachablePoints = [];
     let heatMapPartlyReachablePoints = [];
@@ -131,7 +131,7 @@ async function calcRadPatternWithObstacles(center, pointDir, installHeight, antF
 
         for (let distance = stepSize; distance <= outerBorder[antennaAngle][2]; distance += stepSize) {
             let newPoint = destination(center, pointDir + antennaAngle, distance);
-            let elevationAtPoint = await getElevation(newPoint);
+            let elevationAtPoint = getElevation(newPoint);
             let newPointWithHeight = {lat: newPoint[0], lng: newPoint[1], count: elevationAtPoint};
 
             if (elevationAtPoint >= elevationMax) {
