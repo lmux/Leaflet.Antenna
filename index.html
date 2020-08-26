@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>AntennaMap</title>
+    <title>Leaflet.Antenna</title>
     <style>
         body {
             margin: 0;
@@ -28,11 +28,11 @@
 <body>
 <div id="mapid"></div>
 
-<script src="src/Leaflet.Antenna.js"></script>
-<script src="src/Leaflet.Antenna.Files.js"></script>
-<script src="lib/leaflet-tilelayer-colorpicker.js"></script>
-<script src="lib/QuadTree.js"></script>
-<script src="lib/L.GridLayer.MaskCanvas.js"></script>
+<script src="../src/Leaflet.Antenna.js"></script>
+<script src="../src/Leaflet.Antenna.Files.js"></script>
+<script src="../lib/leaflet-tilelayer-colorpicker.js"></script>
+<script src="../lib/QuadTree.js"></script>
+<script src="../lib/L.GridLayer.MaskCanvas.js"></script>
 <script>
     //let baseLayers = createBaseLayers();
     //let map = L.map('mapid', {layers: baseLayers[0]}).setView([52.4721, 13.2155], 11);
@@ -54,8 +54,12 @@
         access_token: 'pk.eyJ1IjoiZ2VicmF1Y2h0YnJvdCIsImEiOiJja2N6dDRnejEwYTVrMzZxbWhzZTRwZXQ3In0.Uz4EUtUrRtEJVJXmGrKVwg'
     }).setOpacity(0).addTo(map);
 
-    addGeoJSONToMap('example/map_example.geojson', map);
-    parseNetworkJSONFile('example/network_example_simple.json', map);
+    addGeoJSONToMap('map_example.geojson', map);
+    let antennaCoveragePoints;
+    let antennaData = parseNetworkJSONFile('network_example_simple.json', map).then(antennaData =>
+        antennaCoveragePoints = calcRadPatternWithObstacles(antennaData[0].position, antennaData[0].point_dir, antennaData[0].install_height, antennaData[0].profile)
+    ).then(antennaCoveragePoints => drawRadiationPattern(antennaCoveragePoints, map));
+
 </script>
 </body>
 </html>
