@@ -84,88 +84,100 @@ function calcRadPatternBorder(center, pointDir, radiationIDif, outputPowerTXAnte
 }
 
 /**
- Calculates the elevation at the given location
- @param {number[]} location: point of interest, e.g. [51.33849, 12.40729]
- @returns {number} elevation at the given location
+ Calculates antenna coverage of the given transmitting antenna relative to a equally specified receiving antenna and obstacles.
+ @param {number[]} antCords: the origin point of the antenna [lat,long], e.g. [51.33849, 12.40729]
+ @param {number} antPointDir: the direction the antenna is pointing at in degrees, e.g. 0 (facing north)
+ @param {number} antInstallHeight: the height above ground both antennas ar installed at
+ @param {{ant_file: string,frequency: number,gain: number,output_power: number, profile_name: string, sensitivity: number}} antProfile: specifications of the antenna
+ @returns {Number[][]} lists of reachable, unreachable and border points (with distance to antCords) of the radiation pattern [[(lat,long)]]
  */
-function getElevation(location) {
-    //TODO: fully initialize requested tiles before using getColor (currently tiles have to be loaded beforehand by looking at the map region)
-    //modify leaflet-tilelayer-colorpicker to execute this._update function when tile is not loaded with setTimeout until loaded
-    //TODO: use try/catch for NaN exceptions
-    let colorAsRGBA = colorPicker.getColor(location);
-    let h;
-    if (colorAsRGBA !== null) {
-        h = -10000 + ((colorAsRGBA[0] * 256 * 256 + colorAsRGBA[1] * 256 + colorAsRGBA[2]) * 0.1);
-    }
-    return isNaN(h) ? NaN : Number(h.toFixed(2));
-}
+async function calcRadPatternWithObstacles(antCords, antPointDir, antInstallHeight, antProfile) {
 
-/**
- Calculates the radiation pattern of the transmitting antenna relative to the receiving antenna and obstacles.
- @param {number[]} center: the origin point of the antenna [lat,long], e.g. [51.33849, 12.40729]
- @param {number} pointDir: the direction the antenna is pointing at in degrees, e.g. 0 (facing north)
- @param {number} installHeight: the height above ground both antennas ar installed at
- @param {string} antFile: the directory of the .ant file of the antenna
- @param {number} outputPowerTXAntenna: output power of the transmitting antenna in dBm
- @param {number} sensitivityRXAntenna: sensitivity of the receiving antenna in dBm
- @param {number} gainRXAntenna: gain of the receiving antenna in dBi
- @param {number} frequency: frequency both antennas operate on in GHz
- @returns {Number[][]} lists of reachable, unreachable and border points (with distance to center) of the radiation pattern [[(lat,long)]]
- */
-async function calcRadPatternWithObstacles(center, pointDir, installHeight, antFile, outputPowerTXAntenna, sensitivityRXAntenna, gainRXAntenna, frequency) {
+    //the directory of the .ant file of the antenna
+    let antFile = antProfile.ant_file,
+        //output power of the transmitting antenna in dBm
+        outputPowerTXAntenna = antProfile.output_power,
+        //sensitivity of the receiving antenna in dBm
+        sensitivityRXAntenna = antProfile.sensitivity,
+        //gain of the receiving antenna in dBi
+        gainRXAntenna = antProfile.gain,
+        //frequency both antennas operate on in GHz
+        frequency = antProfile.frequency;
+    //TODO: define defaults
 
     const radiationIDif = await parseAntFile(antFile);
-    const outerBorder = calcRadPatternBorder(center, pointDir, radiationIDif, outputPowerTXAntenna, sensitivityRXAntenna, gainRXAntenna, frequency);
-    const elevationTXAntenna = getElevation(center) + installHeight;
+    const outerBorder = calcRadPatternBorder(antCords, antPointDir, radiationIDif, outputPowerTXAntenna, sensitivityRXAntenna, gainRXAntenna, frequency);
+    // const elevationTXAntenna = await getElevationAtPointRGB(antCords) + installHeight;
+    const elevationTXAntenna = await getElevationAtPointRGB(antCords) + antInstallHeight;
 
-    let heatMapReachablePoints = [];
-    let heatMapPartlyReachablePoints = [];
+    let goodReachablePoints = [];
+    let okayReachablePoints = [];
+    let badlyReachablePoints = [];
 
+    let elevationAllPoints = [];
     //distance between two points in meters
     let stepSize = 50;
     for (let antennaAngle = 0; antennaAngle < 360; antennaAngle++) {
 
-        //always has center as first point
-        let anglePoints = [{lat: center[0], lng: center[1], count: elevationTXAntenna}];
+        //always has antCords as first point
+        // let anglePoints = [{lat: antCords[0], lng: antCords[1], count: elevationTXAntenna}];
+        let anglePoints = [{latLng: antCords, height: elevationTXAntenna}];
         let elevationMax = elevationTXAntenna;
 
         for (let distance = stepSize; distance <= outerBorder[antennaAngle][2]; distance += stepSize) {
-            let newPoint = destination(center, pointDir + antennaAngle, distance);
-            let elevationAtPoint = getElevation(newPoint);
-            let newPointWithHeight = {lat: newPoint[0], lng: newPoint[1], count: elevationAtPoint};
+            let newPoint = destination(antCords, antPointDir + antennaAngle, distance);
+            let elevationAtPoint = await getElevationAtPointRGB(newPoint);
+            let newPointWithHeight = {latLng: newPoint, height: elevationAtPoint};
 
             if (elevationAtPoint >= elevationMax) {
                 //line of sight not obstructed
                 elevationMax = elevationAtPoint;
-                heatMapReachablePoints.push(newPoint);
+                goodReachablePoints.push(newPoint);
             } else {
-                //case 1.2: check if all previous points are under current line of sight
+                //check if all previous points are under current line of sight
                 function underLineOfSight(element, index) {
                     //y = mx+n , m: slopeLineOfSight, n: elevationTXAntenna
-                    let slopeLineOfSight = (elevationAtPoint + installHeight - elevationTXAntenna) / distance;
-                    return element.count <= slopeLineOfSight * (index * stepSize) + elevationTXAntenna;
+                    let slopeLineOfSight = (elevationAtPoint + antInstallHeight - elevationTXAntenna) / distance;
+                    return element.height <= slopeLineOfSight * (index * stepSize) + elevationTXAntenna;
                 }
-                //check if all previous points are under the lowest fresnel zone
+                //check if all previous points are under the inner fresnel zone
                 function underFirstFresnelZone(element, index) {
                     const distFromTXAntenna = index * stepSize;
                     //fresnelRadius == Math.sqrt((299792458 * distFromTXAntenna * (distance - distFromTXAntenna)) / (frequency * Math.pow(10, 9) * distance));
                     //reduced constant part: Math.sqrt(299792458 / Math.pow(10, 9)) == 0.5475331
                     let fresnelRadius = 0.5475331 * Math.sqrt((distFromTXAntenna * (distance - distFromTXAntenna)) / (frequency * distance));
-                    let slopeLineOfSight = (elevationAtPoint + installHeight - elevationTXAntenna) / distance;
+                    let slopeLineOfSight = (elevationAtPoint + antInstallHeight - elevationTXAntenna) / distance;
+                    return element.height <= slopeLineOfSight * distFromTXAntenna + elevationTXAntenna - fresnelRadius;
+                }
+                //check if all previous points are under the outer fresnel zone
+                function underSecondFresnelZone(element, index) {
+                    let distFromTXAntenna = index * stepSize;
+                    //fresnelRadius == Math.sqrt((2* 299792458 * distFromTXAntenna * (distance - distFromTXAntenna)) / (frequency * Math.pow(10, 9) * distance));
+                    //reduced constant part: Math.sqrt(2 * 299792458 / Math.pow(10, 9)) == 0.7743287
+                    let fresnelRadius = 0.7743287 * Math.sqrt((distFromTXAntenna * (distance - distFromTXAntenna)) / (frequency * distance));
+                    let slopeLineOfSight = (elevationAtPoint + antInstallHeight - elevationTXAntenna) / distance;
                     return element.count <= slopeLineOfSight * distFromTXAntenna + elevationTXAntenna - fresnelRadius;
                 }
+
+                //line of sight in all cases not obstructed
                 if (anglePoints.every(underLineOfSight)) {
                     if (anglePoints.every(underFirstFresnelZone)) {
-                        //heatMapReachablePoints.push({lat: newPoint[0], lng: newPoint[1],count: 1});
-                        heatMapReachablePoints.push(newPoint);
+                        if (anglePoints.every(underSecondFresnelZone)) {
+                            //no obstruction
+                            goodReachablePoints.push(newPoint);
+                        } else {
+                            //only outer fresnel zone obstructed
+                            okayReachablePoints.push(newPoint);
+                        }
                     } else {
-                        //lower fresnel zone obstructed, but line of sight is clear
-                        heatMapPartlyReachablePoints.push(newPoint);
+                        //both fresnel zones obstructed, but line of sight is clear
+                        badlyReachablePoints.push(newPoint);
                     }
                 }
                 anglePoints.push(newPointWithHeight);
             }
         }
+        elevationAllPoints = elevationAllPoints.concat(anglePoints);
     }
-    return [heatMapReachablePoints, heatMapPartlyReachablePoints, outerBorder];
+    return [goodReachablePoints, okayReachablePoints, badlyReachablePoints, outerBorder];
 }

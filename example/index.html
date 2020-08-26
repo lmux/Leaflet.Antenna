@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>AntennaMap</title>
+    <title>Leaflet.Antenna</title>
     <style>
         body {
             margin: 0;
@@ -55,7 +55,11 @@
     }).setOpacity(0).addTo(map);
 
     addGeoJSONToMap('map_example.geojson', map);
-    parseNetworkJSONFile('network_example_simple.json', map);
+    let antennaCoveragePoints;
+    let antennaData = parseNetworkJSONFile('network_example_simple.json', map).then(antennaData =>
+        antennaCoveragePoints = calcRadPatternWithObstacles(antennaData[0].position, antennaData[0].point_dir, antennaData[0].install_height, antennaData[0].profile)
+    ).then(antennaCoveragePoints => drawRadiationPattern(antennaCoveragePoints, map));
+
 </script>
 </body>
 </html>

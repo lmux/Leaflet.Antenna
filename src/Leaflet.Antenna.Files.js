@@ -43,8 +43,10 @@ function setStyle(feature) {
  Parses the .json network file and draws antenna links and coverage on the given map
  @param {string} file: .json file
  @param {L.Map} map: leaflet map
+ @returns {object[][]} antenna data needed for radiation pattern
  */
 async function parseNetworkJSONFile(file, map) {
+    let antennaData = [];
     let networkData = await fetch(file).then(res => res.json());
     let markerNameAndPos = getMapMarkerNameAndPos(map);
     if (networkData.antenna_links) {
@@ -64,12 +66,13 @@ async function parseNetworkJSONFile(file, map) {
             for (const antenna of site.installed_antennas) {
                 let antennaProfile = getAntennaProfile(antenna.antenna_profile, networkData.antenna_profiles);
                 let antennaPosition = getPositionOfMarker(site.site_name, markerNameAndPos);
-                drawRadiationPattern(antennaPosition, antennaProfile, antenna.point_dir, antenna.install_height, map);
+                antenna.profile = antennaProfile;
+                antenna.position = antennaPosition;
+                antennaData.push(antenna);
             }
         }
     }
-    if (networkData.antenna_profiles) {
-    }
+    return antennaData;
 }
 
 /**
@@ -87,52 +90,6 @@ function getPositionOfMarker(markerName, markerNameAndPosList) {
         }
     }
     return position;
-}
-
-/**
- Draws antenna coverage on the given map
- @param {number[]} position: of the given marker if in array, else undefined
- @param {{ant_file: string,frequency: number,gain: number,output_power: number, profile_name: string, sensitivity: number}} antennaProfile: specifications of the antenna
- @param {number} pointDir: angle the antenna ist pointing at in degrees (North equals 0°, counting clockwise)
- @param {number} installHeight: the height both antennas are installed over the terrain in meters
- @param {L.Map} map: leaflet map
- */
-async function drawRadiationPattern(position, antennaProfile, pointDir, installHeight, map) {
-    //create own pane that sits lower than default overlayPane
-    if (!map.getPane('radiationPatternPane')) {
-        map.createPane('radiationPatternPane').style.zIndex = '300';
-    }
-
-    L.TileLayer.maskCanvas();
-
-    let layerReachablePoints = L.TileLayer.maskCanvas({
-        radius: 25,  // radius in pixels or in meters (see useAbsoluteRadius)
-        useAbsoluteRadius: true,  // true: r in meters, false: r in pixels
-        color: '#0239ff',  // the color of the layerReachablePoints
-        opacity: 0.5,  // opacity of the not covered area
-        noMask: true  // true results in normal (filled) circled, instead masked circles
-        //lineColor: '#0239ff'   // color of the circle outline if noMask is true
-    });
-    let layerPartlyReachablePoints = L.TileLayer.maskCanvas({
-        radius: 25,  // radius in pixels or in meters (see useAbsoluteRadius)
-        useAbsoluteRadius: true,  // true: r in meters, false: r in pixels
-        color: '#681b80',  // the color of the layerReachablePoints
-        opacity: 0.5,  // opacity of the not covered area
-        noMask: true  // true results in normal (filled) circled, instead masked circles
-        //lineColor: '#0239ff'   // color of the circle outline if noMask is true
-    });
-    calcRadPatternWithObstacles(position, pointDir, installHeight, antennaProfile.ant_file, antennaProfile.output_power, antennaProfile.sensitivity, antennaProfile.gain, antennaProfile.frequency)
-        .then(data => {
-            layerReachablePoints.setData(data[0]);
-            layerPartlyReachablePoints.setData(data[1]);
-            L.polygon(data[2], {
-                color: 'yellow',
-                stroke: false,
-                pane: 'radiationPatternPane'
-            }).addTo(map);
-        });
-    map.addLayer(layerReachablePoints);
-    map.addLayer(layerPartlyReachablePoints);
 }
 
 /**
@@ -191,3 +148,63 @@ function findSiteOfAntenna(antennaName, antennaSites) {
         }
     return site_name;
 }
+
+/**
+ Calculates the elevation at the given location using the colorPicker tilelayer
+ @param {number[]} location: point of interest, e.g. [51.33849, 12.40729]
+ @returns {number} elevation at the given location
+ */
+async function getElevationAtPointRGB(location) {
+    //TODO: fully initialize requested tiles before using getColor (currently tiles have to be loaded beforehand by looking at the map region)
+    //modify leaflet-tilelayer-colorpicker to execute this._update function when tile is not loaded with setTimeout until loaded
+    //TODO: use try/catch for NaN exceptions
+    let colorAsRGBA = colorPicker.getColor(location);
+    let h;
+    if (colorAsRGBA !== null) {
+        h = -10000 + ((colorAsRGBA[0] * 256 * 256 + colorAsRGBA[1] * 256 + colorAsRGBA[2]) * 0.1);
+    }
+    return isNaN(h) ? NaN : Number(h.toFixed(2));
+}
+/**
+ Draws antenna radiation pattern on the given map
+ @param {latLng[][]} radiationPoints: holds good, okay and badly destination points as three seperate latLng arrays
+ @param {L.Map} map: leaflet map
+ */
+function drawRadiationPattern(radiationPoints, map) {
+    //create own pane that sits lower than default overlayPane
+    if (!map.getPane('radiationPatternPane')) {
+        map.createPane('radiationPatternPane').style.zIndex = '300';
+    }
+
+    L.TileLayer.maskCanvas()
+
+    let layerGoodReachablePoints = L.TileLayer.maskCanvas({
+        radius: 25,  // radius in pixels or in meters (see useAbsoluteRadius)
+        useAbsoluteRadius: true,  // true: r in meters, false: r in pixels
+        color: '#0a197b',  // the color of each point
+        opacity: 0.5,  // opacity of the not covered area
+        noMask: true  // true results in normal (filled) circled, instead masked circles
+        //lineColor: '#0239ff'   // color of the circle outline if noMask is true
+    });
+    let layerOkayReachablePoints = L.TileLayer.maskCanvas({
+        radius: 25,
+        useAbsoluteRadius: true,
+        color: '#235dd2',
+        opacity: 0.5,
+        noMask: true
+    });
+    let layerBadlyReachablePoints = L.TileLayer.maskCanvas({
+        radius: 25,
+        useAbsoluteRadius: true,
+        color: '#681b80',
+        opacity: 0.5,
+        noMask: true
+    });
+    layerGoodReachablePoints.setData(radiationPoints[0]);
+    layerOkayReachablePoints.setData(radiationPoints[1]);
+    layerBadlyReachablePoints.setData(radiationPoints[2]);
+    map.addLayer(layerGoodReachablePoints);
+    map.addLayer(layerOkayReachablePoints);
+    map.addLayer(layerBadlyReachablePoints);
+}
+
