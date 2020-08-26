@@ -165,6 +165,7 @@ async function getElevationAtPointRGB(location) {
     }
     return isNaN(h) ? NaN : Number(h.toFixed(2));
 }
+
 /**
  Draws antenna radiation pattern on the given map
  @param {latLng[][]} radiationPoints: holds good, okay and badly destination points as three seperate latLng arrays
@@ -206,5 +207,11 @@ function drawRadiationPattern(radiationPoints, map) {
     map.addLayer(layerGoodReachablePoints);
     map.addLayer(layerOkayReachablePoints);
     map.addLayer(layerBadlyReachablePoints);
+
+    L.polygon(radiationPoints[3], {
+        color: 'yellow',
+        stroke: false,
+        pane: 'radiationPatternPane'
+    }).addTo(map);
 }
 
