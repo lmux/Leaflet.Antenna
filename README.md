@@ -7,20 +7,39 @@ A leaflet plugin for displaying antenna sites and coverage.
 
 [Basic antenna site](https://lmux.github.io/Leaflet.Antenna/)
 
+The display of the antenna coverage in this example might take a while depending on the system, because the used external library for calculating the height is unoptimized for this case.
+
 ## Motivation
 
 Before Leaflet.Antenna, when configuring antenna networks users had to rely in proprietary software or services which limited the functionality to certain antennas or exposed their planned antenna configuration. 
 Networks should be built and controlled by the people who use them, with tools that are freely available, without profiting off the necessity to communicate.
 
 ## Usage example
+All core functions for calculating the antenna coverage are in `Leaflet.Antenna.js` , `Leaflet.Antenna.Files.js` has extra functions for handling files and collecting the antenna specifications and position needed for the calculations.
+
+`Leaflet.Antenna.js`:
 
 ```javascript
-    addGeoJSONToMap('map_example.geojson', map);
+calcRadPatternWithObstacles(antCords, antPointDir, antInstallHeight, antProfile)
+```
+Calculates antenna coverage of the given transmitting antenna relative to a equally specified receiving antenna and obstacles and returns all covered points seperated in three groups of signal quality (good,okay,bad).
+ 
+`Leaflet.Antenna.Files.js`:
+
+
+```javascript
+drawRadiationPattern(radiationPoints, map)
+```
+Draws antenna radiation pattern on the given map using the libraries `QuadTree.js` and `L.GridLayer.MaskCanvas.js`
+Other libraries can be used to display the points of coverage
+
+```javascript
+addGeoJSONToMap('map_example.geojson', map);
 ```
 Parses the .geojson file and draws markers and geometries from feature collection on the map 
 
 ```javascript
-    parseNetworkJSONFile('network_example_simple.json', map);
+parseNetworkJSONFile('network_example_simple.json', map);
 ```
 Parses the .json network file and draws antenna links and coverage for each antenna on the map
 
@@ -70,7 +89,11 @@ Example network configuration file: (without comments when used)
 }
 ```
 ## Dependencies / Used Leaflet Plugins
-
+The core functionality in `Leaflet.Antenna.js` doesn't depend on external libraries (other than leaflet.js) and all functions used in `Leaflet.Antenna.Files.js`
+could therefore be replaced. 
+ 
+ `Leaflet.Antenna.Files.js`:
+ 
  The function `getElevation` requires a tileLayer `L.tileLayer.colorPicker` from the leaflet plugin [leaflet-tilelayer-colorpicker](https://github.com/frogcat/leaflet-tilelayer-colorpicker) to get the elevation at any point by using the function `getColor` of that tile layer. 
  
 The function `drawRadiationPattern` requires a tileLayer `L.TileLayer.maskCanvas` from the leaflet plugin [leaflet-maskcanvas](https://github.com/domoritz/leaflet-maskcanvas) to draw the coverage on the tile layers, which are created in the function.
@@ -79,4 +102,3 @@ The function `drawRadiationPattern` requires a tileLayer `L.TileLayer.maskCanvas
 ## TODO
 -  increase calculation speed of the radiation patterns
 -  eventually change the configuration file format to a format which supports comments if needed (probably JSON5)
--  make functions more modular
