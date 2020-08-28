@@ -56,9 +56,12 @@
 
     addGeoJSONToMap('example/map_example.geojson', map);
     let antennaCoveragePoints;
-    let antennaData = parseNetworkJSONFile('example/network_example_simple.json', map).then(antennaData =>
-        antennaCoveragePoints = calcRadPatternWithObstacles(antennaData[0].position, antennaData[0].point_dir, antennaData[0].install_height, antennaData[0].profile)
-    ).then(antennaCoveragePoints => drawRadiationPattern(antennaCoveragePoints, map));
+    //wait for colorPicker tiles and markers to load
+    setTimeout(()=> {
+        parseNetworkJSONFile('example/network_example_simple.json', map).then(antennaData =>
+            antennaCoveragePoints = calcRadPatternWithObstacles(antennaData[0].position, antennaData[0].point_dir, antennaData[0].install_height, antennaData[0].profile)
+        ).then(antennaCoveragePoints => drawRadiationPattern(antennaCoveragePoints, map));
+    },3000);
 
 </script>
 </body>
