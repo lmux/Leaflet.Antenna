@@ -161,7 +161,10 @@ async function getElevationAtPointRGB(location) {
     let colorAsRGBA = colorPicker.getColor(location);
     let h;
     if (colorAsRGBA !== null) {
-        h = -10000 + ((colorAsRGBA[0] * 256 * 256 + colorAsRGBA[1] * 256 + colorAsRGBA[2]) * 0.1);
+        // h = -10000 + ((colorAsRGBA[0] * 256 * 256 + colorAsRGBA[1] * 256 + colorAsRGBA[2]) * 0.1);
+        //hardcoded for areas under 3100m height, use above calculation otherwise
+        h = -10000 + ((65536 + colorAsRGBA[1] * 256 + colorAsRGBA[2]) * 0.1);
+        // h = -10000 + ((1 * 256 * 256 + colorAsRGBA[1] * 256 + colorAsRGBA[2]) * 0.1);
     }
     return isNaN(h) ? NaN : Number(h.toFixed(2));
 }
